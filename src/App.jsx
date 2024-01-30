@@ -1,17 +1,33 @@
 import { useQuery } from 'react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'; 
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import axios from 'axios';
 import './App.css'
 
+function App() {
+  return (
+    <div>
+      <Count />
+      <Pokemon />
+    </div>
+  )
+}
 
-function Pokemon() {
-  const queryInfo = useQuery('pokemon', async () => {
+function usePokemon() {
+  return useQuery('pokemons', async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
-
     return axios
       .get('https://pokeapi.co/api/v2/pokemon')
       .then(res => res.data.results)
   })
+}
+
+function Count() {
+  const queryInfo = usePokemon();
+  return <h2>You are looking at {queryInfo.data?.length} pokemon</h2>
+}
+
+function Pokemon() {
+  const queryInfo =  usePokemon();
 
   return queryInfo.isLoading ? (
     'Loading...'
@@ -22,14 +38,8 @@ function Pokemon() {
       {queryInfo?.data.map((result) => {
         return <div key={result.name}>{result.name}</div>
       })}
-    </div>
-  )
-}
-
-function App() {
-  return (
-    <div>
-        <Pokemon />
+      <br />
+      {queryInfo.isFetching ? 'Updating...' : null}
     </div>
   )
 }
