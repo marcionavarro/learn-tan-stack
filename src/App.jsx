@@ -1,5 +1,5 @@
 import { useQuery } from 'react-query'
-import axios from 'axios';
+import axios, { CancelToken } from 'axios';
 import './App.css'
 import { useState } from 'react';
 
@@ -16,12 +16,26 @@ function App() {
 
 function PokemonSearch({ pokemon }) {
   const queryInfo = useQuery(
-    pokemon,
+    ['pokemon', pokemon],
     async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return axios
-        .get(`https://pokeapi.co/api/v2/pokemon/${pokemon}`)
-        .then(res => res.data)
+      const controller = new AbortController();
+
+      const signal = controller.signal;
+
+      const promise = new Promise(resolve => setTimeout(resolve, 1000))
+        .then(() => {
+          return fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`, {
+              method: 'get',
+              signal
+            })
+            .then(res => res.json())
+
+          promise.cancel = () => {
+            controller.abort()
+          }
+        })
+
+      return promise
     },
     {
       enabled: true,
