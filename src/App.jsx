@@ -1,60 +1,43 @@
 import { useQuery } from 'react-query'
-import axios, { CancelToken } from 'axios';
+import axios from 'axios';
 import './App.css'
-import { useState } from 'react';
 
-function App() {
-  const [pokemon, setPokemon] = useState('');
-  return (
-    <div>
-      <input value={pokemon} onChange={(e) => setPokemon(e.target.value)} />
-      <PokemonSearch pokemon={pokemon} />
+const email = 'Sincere@april.biz'
+
+function MyPosts() {
+  const userQuery = useQuery('user', () => (
+    axios.get(`https://jsonplaceholder.typicode.com/users?email=${email}`).then(res => res.data[0])
+  ))
+
+  const postsQuery = useQuery('posts', () => (
+    axios.get(`https://jsonplaceholder.typicode.com/posts?userId=${userQuery.data.id}`).then(res => res.data, {
+      enabled:  userQuery?.data.id
+    })
+  ))
+
+  console.log(userQuery.data.id);
+
+
+  return userQuery.isLoading ? (
+    'Loading user...'
+  ) : (
+    <div>User ID: {userQuery.data.id}
+      <br /> <br />
+      {postsQuery.isIdle ? null :
+        postsQuery.isLoading ? (
+          'Loading posts ...'
+        ) : (
+          <div>Post Count: {postsQuery.data.length}</div>
+        )
+      }
     </div>
   )
 }
 
-
-function PokemonSearch({ pokemon }) {
-  const queryInfo = useQuery(
-    ['pokemon', pokemon],
-    async () => {
-      const controller = new AbortController();
-
-      const signal = controller.signal;
-
-      const promise = new Promise(resolve => setTimeout(resolve, 1000))
-        .then(() => {
-          return fetch(`https://pokeapi.co/api/v2/pokemon/${pokemon}`, {
-              method: 'get',
-              signal
-            })
-            .then(res => res.json())
-
-          promise.cancel = () => {
-            controller.abort()
-          }
-        })
-
-      return promise
-    },
-    {
-      enabled: true,
-    }
-  );
-
-  return queryInfo.isLoading ? (
-    'Loading...'
-  ) : queryInfo.isError ? (
-    queryInfo.error.message
-  ) : (
+function App() {
+  return (
     <div>
-      {queryInfo.data?.sprites?.front_default ? (
-        <img src={queryInfo.data.sprites.front_default} alt='pokemon' />
-      ) : (
-        'Pokemon not found.'
-      )}
-      <br />
-      {queryInfo.isFetching ? 'Updating...' : null}
+      <MyPosts />
     </div>
   )
 }
