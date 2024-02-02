@@ -37,7 +37,11 @@ function Post({ postId, setPostId }) {
   const postQuery = useQuery(['posts', postId], async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     return axios.get(`https://jsonplaceholder.typicode.com/posts/${postId}`).then(res => res.data)
+  }, {
+    initialData: queryClient.getQueryData('posts')?.find(post => post.id === postId),
+    initialStale: true
   })
+
   return (
     <div>
       <a href='#' onClick={() => setPostId(-1)}>
@@ -56,9 +60,9 @@ function Post({ postId, setPostId }) {
   )
 }
 
-
+const queryClient = new QueryClient();
 function App() {
-  const queryClient = new QueryClient();
+
   const [postId, setPostId] = useState(-1)
   return (
     <div>
