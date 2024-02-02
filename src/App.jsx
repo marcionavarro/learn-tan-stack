@@ -1,19 +1,27 @@
 import { useQuery, QueryClient, QueryClientProvider } from 'react-query'
 import { ReactQueryDevtools } from 'react-query/devtools';
 import axios from 'axios';
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 
 
 function Posts({ setPostId }) {
   const postsQuery = useQuery('posts', async () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
-    return axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
+    const posts = await axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
 
+    posts.forEach(post => {
+      queryClient.setQueryData(['post', post.id], post)
+    })
+    
+    return posts
   })
 
   return (
     <div>
-      <h1>Posts {postsQuery.isFetching ? '...' : null}</h1>
+      <h1>
+        Posts {postsQuery.isFetching ? '...' : null}{' '}
+      </h1>
+
       {postsQuery.isLoading ? (
         'Loading posts...'
       ) : (
@@ -34,12 +42,9 @@ function Posts({ setPostId }) {
 }
 
 function Post({ postId, setPostId }) {
-  const postQuery = useQuery(['posts', postId], async () => {
+  const postQuery = useQuery(['post', postId], async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     return axios.get(`https://jsonplaceholder.typicode.com/posts/${postId}`).then(res => res.data)
-  }, {
-    initialData: queryClient.getQueryData('posts')?.find(post => post.id === postId),
-    initialStale: true
   })
 
   return (
