@@ -2,22 +2,23 @@ import { useQuery, QueryClient, QueryClientProvider } from 'react-query'
 import { ReactQueryDevtools } from 'react-query/devtools';
 import axios from 'axios';
 import { useReducer, useState } from 'react';
-
+import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router-dom';
 const queryClient = new QueryClient();
-function App() {
 
+
+function App() {
   const [postId, setPostId] = useState(-1)
+
   return (
     <div>
       <QueryClientProvider client={queryClient}>
 
-        {postId > -1 ? (
-          <Post postId={postId} setPostId={setPostId} />
-        ) : (
-          <Posts setPostId={setPostId} />
-        )}
-
-
+        <BrowserRouter>
+          <Routes>
+            <Route path='/' element={<Posts />} />
+            <Route path='/:postId' element={<Post />} />
+          </Routes>
+        </BrowserRouter>
         <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
       </QueryClientProvider>
     </div >
@@ -37,47 +38,42 @@ const fetchPosts = async () => {
   return posts
 }
 
-function Posts({ setPostId }) {
-  const [count, increment] = useReducer(d => d + 1, 0)
-  const postsQuery = useQuery('posts', fetchPosts, {
-    onSuccess: data => {
-      increment();
-    },
-    onError: (error) => {
-
-    },
-    onSettled: (data, error) => {
-
-    }
+function Posts() {
+  const postsQuery = useQuery('posts', async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
+  },{
+    cacheTime: 10000,
   })
 
   return (
     <div>
       <h1>
-        Posts {postsQuery.isFetching ? '...' : null}{' '}
-        {count}
+        Posts {postsQuery.isFetching ? '...' : null}
       </h1>
 
       {postsQuery.isLoading ? (
         'Loading posts...'
       ) : (
         <div>
-          {postsQuery.data.map(post => {
-            return (
-              <div key={post.id}>
-                <a href='#' onClick={() => setPostId(post.id)}>
-                  {post.title}
-                </a>
-              </div>
-            )
-          })}
+          <ul>
+            {postsQuery.data.map(post => {
+              return (
+                <li key={post.id}>
+                  <Link to={`/${post.id}`}>{post.title}</Link>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       )}
     </div>
   )
 }
 
-function Post({ postId, setPostId }) {
+function Post() {
+  const { postId } = useParams()
+
   const postQuery = useQuery(['post', postId], async () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     return axios.get(`https://jsonplaceholder.typicode.com/posts/${postId}`).then(res => res.data)
@@ -85,9 +81,7 @@ function Post({ postId, setPostId }) {
 
   return (
     <div>
-      <a href='#' onClick={() => setPostId(-1)}>
-        Back
-      </a>
+      <Link to='/'>Voltar</Link>
       <br /><br />
       {postQuery.isLoading ? 'Loading post...'
         : (
