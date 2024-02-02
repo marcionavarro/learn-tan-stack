@@ -3,23 +3,59 @@ import { ReactQueryDevtools } from 'react-query/devtools';
 import axios from 'axios';
 import { useReducer, useState } from 'react';
 
+const queryClient = new QueryClient();
+function App() {
+
+  const [postId, setPostId] = useState(-1)
+  return (
+    <div>
+      <QueryClientProvider client={queryClient}>
+
+        {postId > -1 ? (
+          <Post postId={postId} setPostId={setPostId} />
+        ) : (
+          <Posts setPostId={setPostId} />
+        )}
+
+
+        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
+      </QueryClientProvider>
+    </div >
+  )
+}
+
+const fetchPosts = async () => {
+  await new Promise(resolve => setTimeout(resolve, 1000))
+  const posts = await axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
+
+  posts.forEach(post => {
+    queryClient.setQueryData(['post', post.id], post)
+  })
+
+  console.log('On success')
+
+  return posts
+}
 
 function Posts({ setPostId }) {
-  const postsQuery = useQuery('posts', async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    const posts = await axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
+  const [count, increment] = useReducer(d => d + 1, 0)
+  const postsQuery = useQuery('posts', fetchPosts, {
+    onSuccess: data => {
+      increment();
+    },
+    onError: (error) => {
 
-    posts.forEach(post => {
-      queryClient.setQueryData(['post', post.id], post)
-    })
-    
-    return posts
+    },
+    onSettled: (data, error) => {
+
+    }
   })
 
   return (
     <div>
       <h1>
         Posts {postsQuery.isFetching ? '...' : null}{' '}
+        {count}
       </h1>
 
       {postsQuery.isLoading ? (
@@ -62,27 +98,6 @@ function Post({ postId, setPostId }) {
           </>
         )}
     </div>
-  )
-}
-
-const queryClient = new QueryClient();
-function App() {
-
-  const [postId, setPostId] = useState(-1)
-  return (
-    <div>
-      <QueryClientProvider client={queryClient}>
-
-        {postId > -1 ? (
-          <Post postId={postId} setPostId={setPostId} />
-        ) : (
-          <Posts setPostId={setPostId} />
-        )}
-
-
-        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
-      </QueryClientProvider>
-    </div >
   )
 }
 
