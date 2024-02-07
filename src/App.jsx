@@ -1,96 +1,52 @@
-import { useQuery, QueryClient, QueryClientProvider } from 'react-query'
-import { ReactQueryDevtools } from 'react-query/devtools';
+import { QueryCache, QueryClient, useQuery } from 'react-query'
 import axios from 'axios';
-import { useReducer, useState } from 'react';
-import { BrowserRouter, Link, Route, Routes, useParams } from 'react-router-dom';
+import React, { useEffect, useReducer } from 'react';
+
 const queryClient = new QueryClient();
-
-
 function App() {
-  const [postId, setPostId] = useState(-1)
+  const [show, toggle] = useReducer(d => !d, false);
+
+  useEffect(() => {
+    queryClient.prefetchQuery('posts', fetchPosts);
+  }, [])
 
   return (
     <div>
-      <QueryClientProvider client={queryClient}>
-
-        <BrowserRouter>
-          <Routes>
-            <Route path='/' element={<Posts />} />
-            <Route path='/:postId' element={<Post />} />
-          </Routes>
-        </BrowserRouter>
-        <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
-      </QueryClientProvider>
-    </div >
-  )
-}
-
-const fetchPosts = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  const posts = await axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
-
-  posts.forEach(post => {
-    queryClient.setQueryData(['post', post.id], post)
-  })
-
-  console.log('On success')
-
-  return posts
-}
-
-function Posts() {
-  const postsQuery = useQuery('posts', async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    return axios.get('https://jsonplaceholder.typicode.com/posts').then(res => res.data)
-  },{
-    cacheTime: 10000,
-  })
-
-  return (
-    <div>
-      <h1>
-        Posts {postsQuery.isFetching ? '...' : null}
-      </h1>
-
-      {postsQuery.isLoading ? (
-        'Loading posts...'
-      ) : (
-        <div>
-          <ul>
-            {postsQuery.data.map(post => {
-              return (
-                <li key={post.id}>
-                  <Link to={`/${post.id}`}>{post.title}</Link>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      )}
+      <button onClick={toggle}>Show Posts</button>
+      {show ? <Posts /> : null}
     </div>
   )
+
 }
 
-function Post() {
-  const { postId } = useParams()
+async function fetchPosts () {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    return axios.
+      get('https://jsonplaceholder.typicode.com/posts')
+      .then(res => res.data.slice(0, 10))
+}
 
-  const postQuery = useQuery(['post', postId], async () => {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return axios.get(`https://jsonplaceholder.typicode.com/posts/${postId}`).then(res => res.data)
-  })
+function Posts({ setPostId }) {
+  const postsQuery = useQuery('posts', fetchPosts)
 
   return (
     <div>
-      <Link to='/'>Voltar</Link>
-      <br /><br />
-      {postQuery.isLoading ? 'Loading post...'
-        : (
-          <>
-            {postQuery.data.title}
-            <br /><br />
-            {postQuery.isFetching ? 'Updating...' : null}
-          </>
+      <h1>Posts {postsQuery.isFetching ? '...' : null}</h1>
+      <div>
+        {postsQuery.isLoading ? (
+          'Loading posts...'
+        ): (
+          <ul>
+            {postsQuery.data.map(post => {
+              return <li key={post.id}>
+                <a  onClick={() => setPostId(post.id)} href='#'>
+                  {post.title}
+                </a>
+              </li>
+            })}
+          </ul>
         )}
+      </div>
     </div>
   )
 }
